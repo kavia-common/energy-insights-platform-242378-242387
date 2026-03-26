@@ -18,10 +18,14 @@ describe("backend_api/adapter", () => {
 
   test("createRestAdapter calls expected endpoints", async () => {
     const getMock = jest.fn(async () => [{ ok: true }]);
+    const postMock = jest.fn(async () => ({ ok: true }));
+    const patchMock = jest.fn(async () => ({ ok: true }));
 
     jest.doMock("./restClient", () => ({
       createRestClient: () => ({
         get: getMock,
+        post: postMock,
+        patch: patchMock,
       }),
     }));
 
@@ -39,6 +43,18 @@ describe("backend_api/adapter", () => {
     expect(getMock).toHaveBeenNthCalledWith(2, "/alerts");
     expect(getMock).toHaveBeenNthCalledWith(3, "/anomalies");
     expect(getMock).toHaveBeenNthCalledWith(4, "/reports");
+
+    await adapter.createSite({ name: "A" });
+    expect(postMock).toHaveBeenCalledWith("/sites", { body: { name: "A" } });
+
+    await adapter.updateSite("site_1", { status: "Active" });
+    expect(patchMock).toHaveBeenCalledWith("/sites/site_1", { body: { status: "Active" } });
+
+    await adapter.acknowledgeAlert("al_1");
+    expect(postMock).toHaveBeenCalledWith("/alerts/al_1/ack");
+
+    await adapter.generateReport({ type: "Monthly" });
+    expect(postMock).toHaveBeenCalledWith("/reports", { body: { type: "Monthly" } });
   });
 
   test("createBackendAdapter selects mock when config.useMock is true", async () => {

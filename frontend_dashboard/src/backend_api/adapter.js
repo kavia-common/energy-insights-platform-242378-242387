@@ -40,11 +40,6 @@ export function createMockAdapter() {
       if (!found) return null;
       return { ...found, status: "Acknowledged" };
     },
-    async dismissAlert(alertId) {
-      const found = sampleAlerts.find((a) => a.id === alertId);
-      if (!found) return null;
-      return { ...found, status: "Closed" };
-    },
 
     async createSite(payload) {
       // Simulate backend-assigned ID and fill in reasonable defaults.
@@ -66,25 +61,8 @@ export function createMockAdapter() {
       return { ...found, ...(patch || {}), id: found.id };
     },
 
-    async createAlertFromAnomaly(anomalyId) {
-      const found = sampleAnomalies.find((a) => a.id === anomalyId);
-      if (!found) return null;
-      const now = new Date().toISOString();
-      return {
-        id: `al_mock_${Math.random().toString(16).slice(2)}`,
-        createdAt: now,
-        siteId: found.siteId,
-        siteName: found.siteName,
-        type: "Anomaly",
-        severity: found.score >= 0.85 ? "High" : found.score >= 0.7 ? "Medium" : "Low",
-        status: "Open",
-        summary: `${found.category} detected (${Math.round(found.score * 100)}%).`,
-        recommendation: "Review the anomaly details and confirm operational drivers.",
-      };
-    },
-
     async generateReport(payload) {
-      // Simulate a backend-generated report object; prepend so it appears newest.
+      // Simulate a backend-generated report object.
       const now = new Date().toISOString();
       return {
         id: `rp_mock_${Math.random().toString(16).slice(2)}`,
@@ -102,12 +80,18 @@ export function createMockAdapter() {
 export function createRestAdapter(options = {}) {
   /**
    * REST adapter. Endpoints are documented in src/backend_api/contract.md.
+   *
+   * Backend base URL (no auth): http://localhost:5000/api
+   * The restClient composes `${baseUrl}${path}` and we pass paths like "/sites".
+   *
    * @param {{ baseUrl?: string }} options
    */
   const client = createRestClient({ baseUrl: options.baseUrl });
 
   return {
     kind: "rest",
+
+    // Reads
     async listSites() {
       return client.get("/sites");
     },
@@ -121,21 +105,7 @@ export function createRestAdapter(options = {}) {
       return client.get("/reports");
     },
 
-    /**
-     * Mutations (scaffold): these endpoints are part of the hardened UI wiring.
-     * A real backend should implement these to make triage and report flows functional.
-     */
-    async acknowledgeAlert(alertId) {
-      return client.post(`/alerts/${encodeURIComponent(alertId)}/acknowledge`);
-    },
-    async dismissAlert(alertId) {
-      return client.post(`/alerts/${encodeURIComponent(alertId)}/dismiss`);
-    },
-
-    /**
-     * Sites: create/update (scaffold)
-     * Backend can implement these as standard CRUD; UI will refresh lists after mutation.
-     */
+    // Mutations
     async createSite(payload) {
       return client.post("/sites", { body: payload });
     },
@@ -143,16 +113,14 @@ export function createRestAdapter(options = {}) {
       return client.patch(`/sites/${encodeURIComponent(siteId)}`, { body: patch });
     },
 
-    /**
-     * Anomalies → Alerts (optional scaffold): allows creating a triage item from an anomaly.
-     * If backend does not implement it yet, keep it a no-op until integrated.
-     */
-    async createAlertFromAnomaly(anomalyId) {
-      return client.post(`/anomalies/${encodeURIComponent(anomalyId)}/create-alert`);
+    async acknowledgeAlert(alertId) {
+      // Provided endpoint: POST /alerts/:id/ack
+      return client.post(`/alerts/${encodeURIComponent(alertId)}/ack`);
     },
 
     async generateReport(payload) {
-      return client.post("/reports/generate", { body: payload });
+      // Provided endpoint: POST /reports
+      return client.post("/reports", { body: payload });
     },
   };
 }

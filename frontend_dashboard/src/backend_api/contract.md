@@ -15,6 +15,8 @@ This frontend currently uses an adapter layer (`src/backend_api/adapter.js`) so 
 
 ## REST endpoints (expected)
 
+Base URL (local dev): `http://localhost:5000/api`
+
 All responses are JSON.
 
 ### `GET /sites`
@@ -33,6 +35,15 @@ Returns: `Site[]`
 }
 ```
 
+### `POST /sites`
+Creates a new site.
+Body: backend-defined; UI sends `{ name, account, city, status }` (and may include other fields).
+Returns: created `Site` (recommended) or an ok payload.
+
+### `PATCH /sites/:id`
+Updates an existing site.
+Body: partial `Site` patch. Returns: updated `Site` (recommended).
+
 ### `GET /alerts`
 Returns: `Alert[]`
 
@@ -48,6 +59,14 @@ Returns: `Alert[]`
   "summary": "Overnight kWh spike vs baseline (+38%).",
   "recommendation": "Check refrigeration schedules and loading bay lighting."
 }
+```
+
+### `POST /alerts/:id/ack`
+Acknowledges an alert. Returns: updated `Alert` (recommended) or a minimal ok payload.
+
+Example response:
+```json
+{ "id": "al_9001", "status": "Acknowledged" }
 ```
 
 ### `GET /anomalies`
@@ -81,28 +100,9 @@ Returns: `Report[]`
 }
 ```
 
-## Mutation endpoints (recommended)
-
-These endpoints are used by the production-ready UI wiring for triage + report generation.
-
-### `POST /alerts/:id/acknowledge`
-Returns: updated `Alert` (recommended) or a minimal ok payload.
-
-Example response:
-```json
-{ "id": "al_9001", "status": "Acknowledged" }
-```
-
-### `POST /alerts/:id/dismiss`
-Returns: updated `Alert` (recommended) or a minimal ok payload.
-
-Example response:
-```json
-{ "id": "al_9001", "status": "Closed" }
-```
-
-### `POST /reports/generate`
-Body (suggested):
+### `POST /reports`
+Creates/generates a report.
+Body (UI sends):
 ```json
 {
   "type": "Monthly Portfolio Summary",

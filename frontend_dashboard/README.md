@@ -38,7 +38,7 @@ Create a `.env` file (or set these at build time). In Create React App, only var
 ### Required for live backend usage
 
 - `REACT_APP_API_BASE` (preferred) or `REACT_APP_BACKEND_URL` (fallback): REST base URL used by the frontend REST client.
-  - Example: `REACT_APP_API_BASE=https://api.example.com`
+  - Local example (this project): `REACT_APP_API_BASE=http://localhost:5000/api`
   - The frontend constructs requests like `${REACT_APP_API_BASE}/sites`.
 
 ### Optional

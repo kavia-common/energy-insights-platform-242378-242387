@@ -136,11 +136,17 @@ export function useApiAction(actionFn) {
 
 // PUBLIC_INTERFACE
 export function useAlertActions() {
-  /** Alert triage mutations via adapter (acknowledge/dismiss). */
+  /** Alert triage mutations via adapter. Backend currently supports acknowledge. */
   const api = useBackendApi();
 
   const acknowledge = useApiAction((alertId) => api.acknowledgeAlert(alertId));
-  const dismiss = useApiAction((alertId) => api.dismissAlert(alertId));
+
+  // Some backends don't implement "dismiss/close" yet. Keep the UI wiring stable by exposing
+  // a best-effort action that is a no-op when the adapter doesn't provide dismissAlert.
+  const dismiss = useApiAction(async (alertId) => {
+    if (typeof api.dismissAlert === "function") return api.dismissAlert(alertId);
+    return { id: alertId, status: "Closed", ok: true, skipped: true };
+  });
 
   return { acknowledge, dismiss };
 }
@@ -166,9 +172,14 @@ export function useSiteActions() {
 
 // PUBLIC_INTERFACE
 export function useAnomalyActions() {
-  /** Anomaly-related mutations via adapter (create alert from anomaly). */
+  /** Anomaly-related mutations via adapter (optional create alert from anomaly). */
   const api = useBackendApi();
-  const createAlert = useApiAction((anomalyId) => api.createAlertFromAnomaly(anomalyId));
+
+  const createAlert = useApiAction(async (anomalyId) => {
+    if (typeof api.createAlertFromAnomaly === "function") return api.createAlertFromAnomaly(anomalyId);
+    return { ok: true, skipped: true, anomalyId };
+  });
+
   return { createAlert };
 }
 
