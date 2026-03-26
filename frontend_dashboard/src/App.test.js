@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import AppShell from "./layout/AppShell";
 import { routes } from "./app/routes";
@@ -48,32 +48,42 @@ describe("AppShell + core routes (smoke)", () => {
 
   test("renders Dashboard route", () => {
     renderAt("/");
-    expect(screen.getByText(/Portfolio snapshot/i)).toBeInTheDocument();
+    // Scope assertions to the routed page content to avoid collisions with sidebar/topbar labels.
+    const main = screen.getByRole("main");
+    expect(within(main).getByText(/Portfolio snapshot/i)).toBeInTheDocument();
   });
 
   test("renders Anomalies route", () => {
     renderAt("/anomalies");
-    expect(screen.getByText(/Anomalies/i)).toBeInTheDocument();
+    // "Anomalies" also appears in the sidebar nav; assert within main content only.
+    const main = screen.getByRole("main");
+    expect(within(main).getByText(/^Anomalies$/i)).toBeInTheDocument();
   });
 
   test("renders Alerts route", () => {
     renderAt("/alerts");
-    expect(screen.getByText(/^Alerts$/i)).toBeInTheDocument();
+    // "Alerts" also appears in the sidebar nav; assert within main content only.
+    const main = screen.getByRole("main");
+    expect(within(main).getByText(/^Alerts$/i)).toBeInTheDocument();
   });
 
   test("renders Accounts/Sites route", () => {
     renderAt("/accounts");
-    expect(screen.getByText(/Accounts & Sites/i)).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    expect(within(main).getByText(/Accounts & Sites/i)).toBeInTheDocument();
   });
 
   test("renders Reports route", () => {
     renderAt("/reports");
-    expect(screen.getByText(/Generated reports/i)).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    expect(within(main).getByText(/Generated reports/i)).toBeInTheDocument();
   });
 
   test("renders Settings route", () => {
     renderAt("/settings");
-    expect(screen.getByText(/Profile/i)).toBeInTheDocument();
-    expect(screen.getByText(/Notifications/i)).toBeInTheDocument();
+    // Settings page has multiple cards; keep assertions scoped to main to avoid topbar actions.
+    const main = screen.getByRole("main");
+    expect(within(main).getByText(/^Profile$/i)).toBeInTheDocument();
+    expect(within(main).getByText(/^Notifications$/i)).toBeInTheDocument();
   });
 });

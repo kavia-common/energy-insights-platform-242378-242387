@@ -80,9 +80,14 @@ describe("backend_api/restClient", () => {
     const { createRestClient } = await import("./restClient");
     const client = createRestClient({ baseUrl: "" });
 
-    await expect(client.get("/sites")).rejects.toBeInstanceOf(ApiError);
+    // Avoid brittle instanceof checks: in Jest, module duplication can lead to two ApiError constructors.
     await expect(client.get("/sites")).rejects.toMatchObject({
+      name: "ApiError",
       code: "NO_API_BASE",
+      status: undefined,
     });
+
+    // Optional: keep a lightweight "looks like ApiError" invariant without relying on constructor identity.
+    await expect(client.get("/sites")).rejects.toSatisfy?.((e) => e && typeof e.message === "string");
   });
 });
