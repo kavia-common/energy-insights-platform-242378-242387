@@ -1,123 +1,144 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { Card, CardBody, CardHeader } from "../components/ui/Card";
+import KpiTile from "../components/dashboard/KpiTile";
+import ChartPlaceholder from "../components/charts/ChartPlaceholder";
+import DataTable from "../components/ui/DataTable";
+import Badge from "../components/ui/Badge";
+import { sampleAlerts, sampleSites } from "../mocks/sampleData";
+
+function severityVariant(sev) {
+  if (sev === "High") return "danger";
+  if (sev === "Medium") return "warning";
+  return "info";
+}
 
 /**
- * Baseline dashboard landing page (placeholder).
- * Future steps will replace these cards with real analytics and visualizations.
+ * Core dashboard landing page:
+ * - KPI tiles
+ * - Chart placeholders (no charting dependency yet)
+ * - Recent alerts + ingestion health highlights
  */
+// PUBLIC_INTERFACE
 export default function DashboardHome() {
+  const kpis = useMemo(() => {
+    const openAlerts = sampleAlerts.filter((a) => a.status === "Open").length;
+    const sitesMonitored = sampleSites.length;
+    const delayed = sampleSites.filter((s) => Date.now() - new Date(s.lastIngest).getTime() > 1000 * 60 * 60 * 48).length;
+
+    return { openAlerts, sitesMonitored, delayed };
+  }, []);
+
+  const recentAlerts = useMemo(() => {
+    return [...sampleAlerts]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+  }, []);
+
   return (
     <>
-      <section className="card" style={{ padding: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-              Portfolio snapshot
+      <Card>
+        <CardHeader
+          title="Portfolio snapshot"
+          subtitle="A quick view of monitored sites, active alerts, and key trends."
+          right={
+            <div className="ei-row" style={{ gap: 10 }}>
+              <div className="ei-chip ei-chip--info">Ocean Professional</div>
+              <div className="ei-chip">Mock data</div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
-              Commercial Energy Overview
-            </div>
-            <div style={{ marginTop: 6, color: "var(--color-text-muted)", lineHeight: 1.4 }}>
-              UI shell is ready. Next steps will connect insights, anomaly detection, and alert streams.
-            </div>
-          </div>
-
-          <div
-            className="card"
-            style={{
-              padding: 12,
-              borderRadius: "var(--radius-md)",
-              background: "rgba(37, 99, 235, 0.08)",
-              borderColor: "rgba(37, 99, 235, 0.18)",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-              Status
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>
-              Theme + Routing OK
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(12, 1fr)",
-          gap: 16,
-        }}
-      >
-        <div className="card" style={{ gridColumn: "span 4", padding: 16, minHeight: 120 }}>
-          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-            Active alerts
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 10 }}>
-            —
-          </div>
-          <div style={{ marginTop: 8, color: "var(--color-text-muted)" }}>
-            Connect backend to populate.
-          </div>
-        </div>
-
-        <div className="card" style={{ gridColumn: "span 4", padding: 16, minHeight: 120 }}>
-          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-            Sites monitored
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 10 }}>
-            —
-          </div>
-          <div style={{ marginTop: 8, color: "var(--color-text-muted)" }}>
-            Coming with account management.
-          </div>
-        </div>
-
-        <div className="card" style={{ gridColumn: "span 4", padding: 16, minHeight: 120 }}>
-          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-            Data freshness
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 800, marginTop: 10 }}>
-            —
-          </div>
-          <div style={{ marginTop: 8, color: "var(--color-text-muted)" }}>
-            To be shown per meter ingestion.
-          </div>
-        </div>
-
-        <div className="card" style={{ gridColumn: "span 12", padding: 16, minHeight: 220 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                Consumption trend
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginTop: 6 }}>
-                Placeholder chart region
-              </div>
-            </div>
-            <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>
-              Next: integrate charting + data fetching scaffold
-            </div>
-          </div>
-
-          <div
-            style={{
-              marginTop: 14,
-              height: 140,
-              borderRadius: "var(--radius-md)",
-              border: "1px dashed rgba(17, 24, 39, 0.20)",
-              background: "linear-gradient(180deg, rgba(245, 158, 11, 0.10), rgba(255,255,255,0))",
-            }}
-            aria-label="Chart placeholder"
-          />
-        </div>
-      </section>
-
-      <style>{`
-        @media (max-width: 980px) {
-          section[style*="grid-template-columns"] > .card {
-            grid-column: span 12 !important;
           }
-        }
-      `}</style>
+        />
+        <CardBody>
+          <div className="ei-grid ei-grid--kpis">
+            <KpiTile
+              label="Active alerts"
+              value={kpis.openAlerts}
+              helper="Open alerts requiring triage"
+              trend={kpis.openAlerts > 0 ? "Needs attention" : "All clear"}
+              tone={kpis.openAlerts > 0 ? "danger" : "success"}
+            />
+            <KpiTile
+              label="Sites monitored"
+              value={kpis.sitesMonitored}
+              helper="Sites currently configured"
+              trend="Tracking"
+              tone="info"
+            />
+            <KpiTile
+              label="Data delays"
+              value={kpis.delayed}
+              helper="Sites >48h since last ingest"
+              trend={kpis.delayed > 0 ? "Investigate" : "Healthy"}
+              tone={kpis.delayed > 0 ? "warning" : "success"}
+            />
+            <KpiTile
+              label="Benchmark status"
+              value="—"
+              helper="Pending backend integration"
+              trend="Coming soon"
+              tone="neutral"
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      <div className="ei-grid ei-grid--twoCol">
+        <Card className="ei-span-7">
+          <CardHeader
+            title="Consumption trend"
+            subtitle="kWh across the portfolio (placeholder)."
+            right={<button className="ei-btn ei-btn--ghost" type="button">View details</button>}
+          />
+          <CardBody>
+            <ChartPlaceholder
+              title="Total consumption (kWh)"
+              subtitle="Integrate charting + API data in step 01.03."
+              height={260}
+            />
+          </CardBody>
+        </Card>
+
+        <Card className="ei-span-5">
+          <CardHeader
+            title="Peak demand"
+            subtitle="Daily peak summary (placeholder)."
+            right={<div className="ei-chip ei-chip--warn">Beta</div>}
+          />
+          <CardBody>
+            <ChartPlaceholder
+              title="Peak demand (kW)"
+              subtitle="Placeholder: show top sites by peak."
+              height={260}
+            />
+          </CardBody>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader
+          title="Recent alerts"
+          subtitle="Latest anomaly alerts and triage status."
+          right={<a className="ei-link" href="/alerts">Go to Alerts →</a>}
+        />
+        <CardBody>
+          <DataTable
+            columns={[
+              { key: "createdAt", header: "Created", width: "170px", render: (r) => new Date(r.createdAt).toLocaleString() },
+              { key: "siteName", header: "Site" },
+              { key: "type", header: "Type", width: "130px" },
+              {
+                key: "severity",
+                header: "Severity",
+                width: "120px",
+                render: (r) => <Badge variant={severityVariant(r.severity)}>{r.severity}</Badge>,
+              },
+              { key: "status", header: "Status", width: "150px" },
+              { key: "summary", header: "Summary" },
+            ]}
+            rows={recentAlerts}
+            emptyLabel="No alerts yet."
+          />
+        </CardBody>
+      </Card>
     </>
   );
 }
