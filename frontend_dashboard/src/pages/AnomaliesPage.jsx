@@ -4,7 +4,8 @@ import Tabs from "../components/ui/Tabs";
 import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
-import { sampleAnomalies } from "../mocks/sampleData";
+import ApiStateBanner from "../components/ui/ApiStateBanner";
+import { useAnomalies } from "../backend_api/hooks";
 
 function scoreTone(score) {
   if (score >= 0.85) return "danger";
@@ -22,23 +23,26 @@ export default function AnomaliesPage() {
   const [tab, setTab] = useState("all");
   const [selected, setSelected] = useState(null);
 
+  const anomaliesState = useAnomalies();
+  const anomalies = anomaliesState.data || [];
+
   const rows = useMemo(() => {
-    if (tab === "high") return sampleAnomalies.filter((a) => a.score >= 0.85);
-    if (tab === "watch") return sampleAnomalies.filter((a) => a.score >= 0.7 && a.score < 0.85);
-    return sampleAnomalies;
-  }, [tab]);
+    if (tab === "high") return anomalies.filter((a) => a.score >= 0.85);
+    if (tab === "watch") return anomalies.filter((a) => a.score >= 0.7 && a.score < 0.85);
+    return anomalies;
+  }, [tab, anomalies]);
 
   const tabs = useMemo(
     () => [
-      { value: "all", label: "All", count: sampleAnomalies.length },
-      { value: "high", label: "High", count: sampleAnomalies.filter((a) => a.score >= 0.85).length },
+      { value: "all", label: "All", count: anomalies.length },
+      { value: "high", label: "High", count: anomalies.filter((a) => a.score >= 0.85).length },
       {
         value: "watch",
         label: "Watch",
-        count: sampleAnomalies.filter((a) => a.score >= 0.7 && a.score < 0.85).length,
+        count: anomalies.filter((a) => a.score >= 0.7 && a.score < 0.85).length,
       },
     ],
-    []
+    [anomalies]
   );
 
   const columns = useMemo(
@@ -71,17 +75,26 @@ export default function AnomaliesPage() {
           right={<Tabs tabs={tabs} value={tab} onChange={setTab} ariaLabel="Anomaly filters" />}
         />
         <CardBody>
-          <DataTable
-            columns={columns}
-            rows={rows}
-            onRowClick={(row) => setSelected(row)}
-            rowActions={(row) => (
-              <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
-                View
-              </button>
-            )}
-            emptyLabel="No anomalies for this filter."
+          <ApiStateBanner
+            isLoading={anomaliesState.isLoading}
+            error={anomaliesState.error}
+            label="Anomalies"
+            onRetry={() => anomaliesState.reload()}
           />
+          <div style={{ marginTop: 12 }}>
+            <DataTable
+              columns={columns}
+              rows={rows}
+              isLoading={anomaliesState.isLoading}
+              onRowClick={(row) => setSelected(row)}
+              rowActions={(row) => (
+                <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
+                  View
+                </button>
+              )}
+              emptyLabel="No anomalies for this filter."
+            />
+          </div>
         </CardBody>
       </Card>
 

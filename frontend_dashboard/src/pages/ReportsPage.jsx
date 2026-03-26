@@ -4,7 +4,8 @@ import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import ChartPlaceholder from "../components/charts/ChartPlaceholder";
-import { sampleReports } from "../mocks/sampleData";
+import ApiStateBanner from "../components/ui/ApiStateBanner";
+import { useReports } from "../backend_api/hooks";
 
 function statusVariant(status) {
   if (status === "Ready") return "success";
@@ -14,9 +15,12 @@ function statusVariant(status) {
 
 // PUBLIC_INTERFACE
 export default function ReportsPage() {
-  /** Reports hub: templates + generated reports list (mock). */
+  /** Reports hub: templates + generated reports list (mock or live). */
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+
+  const reportsState = useReports();
+  const reports = reportsState.data || [];
 
   const columns = useMemo(
     () => [
@@ -76,17 +80,26 @@ export default function ReportsPage() {
       <Card>
         <CardHeader title="Generated reports" subtitle="Downloadable artifacts and drafts." />
         <CardBody>
-          <DataTable
-            columns={columns}
-            rows={sampleReports}
-            onRowClick={(row) => setSelected(row)}
-            rowActions={(row) => (
-              <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
-                Open
-              </button>
-            )}
-            emptyLabel="No reports yet."
+          <ApiStateBanner
+            isLoading={reportsState.isLoading}
+            error={reportsState.error}
+            label="Reports"
+            onRetry={() => reportsState.reload()}
           />
+          <div style={{ marginTop: 12 }}>
+            <DataTable
+              columns={columns}
+              rows={reports}
+              isLoading={reportsState.isLoading}
+              onRowClick={(row) => setSelected(row)}
+              rowActions={(row) => (
+                <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
+                  Open
+                </button>
+              )}
+              emptyLabel="No reports yet."
+            />
+          </div>
         </CardBody>
       </Card>
 

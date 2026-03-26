@@ -3,7 +3,8 @@ import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
-import { sampleSites } from "../mocks/sampleData";
+import ApiStateBanner from "../components/ui/ApiStateBanner";
+import { useSites } from "../backend_api/hooks";
 
 function statusVariant(status) {
   if (status === "Active") return "success";
@@ -13,21 +14,24 @@ function statusVariant(status) {
 
 // PUBLIC_INTERFACE
 export default function AccountsSitesPage() {
-  /** Accounts/Sites management: searchable list + simple create/edit modal (mock). */
+  /** Accounts/Sites management: searchable list + simple create/edit modal (mock or live). */
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  const sitesState = useSites();
+  const sites = sitesState.data || [];
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return sampleSites;
-    return sampleSites.filter(
+    if (!q) return sites;
+    return sites.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
         s.account.toLowerCase().includes(q) ||
         s.city.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [query, sites]);
 
   const columns = useMemo(
     () => [
@@ -75,17 +79,26 @@ export default function AccountsSitesPage() {
           }
         />
         <CardBody>
-          <DataTable
-            columns={columns}
-            rows={filtered}
-            onRowClick={(row) => setSelected(row)}
-            rowActions={(row) => (
-              <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
-                Manage
-              </button>
-            )}
-            emptyLabel="No sites matched your search."
+          <ApiStateBanner
+            isLoading={sitesState.isLoading}
+            error={sitesState.error}
+            label="Sites"
+            onRetry={() => sitesState.reload()}
           />
+          <div style={{ marginTop: 12 }}>
+            <DataTable
+              columns={columns}
+              rows={filtered}
+              isLoading={sitesState.isLoading}
+              onRowClick={(row) => setSelected(row)}
+              rowActions={(row) => (
+                <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
+                  Manage
+                </button>
+              )}
+              emptyLabel="No sites matched your search."
+            />
+          </div>
         </CardBody>
       </Card>
 

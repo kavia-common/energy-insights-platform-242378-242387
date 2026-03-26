@@ -87,6 +87,26 @@ input {
   white-space: nowrap;
 }
 
+/* API state banner (loading/errors) */
+.ei-apiBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: rgba(249, 250, 251, 0.85);
+  box-shadow: var(--shadow-sm);
+  color: rgba(17, 24, 39, 0.85);
+}
+
+.ei-apiBanner__text {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.75);
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

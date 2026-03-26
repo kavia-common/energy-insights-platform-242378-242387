@@ -4,7 +4,9 @@ import KpiTile from "../components/dashboard/KpiTile";
 import ChartPlaceholder from "../components/charts/ChartPlaceholder";
 import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
-import { sampleAlerts, sampleSites } from "../mocks/sampleData";
+import ApiStateBanner from "../components/ui/ApiStateBanner";
+import { useAlerts, useSites } from "../backend_api/hooks";
+import { getBackendConfig } from "../backend_api/config";
 
 function severityVariant(sev) {
   if (sev === "High") return "danger";
@@ -20,19 +22,29 @@ function severityVariant(sev) {
  */
 // PUBLIC_INTERFACE
 export default function DashboardHome() {
+  const cfg = getBackendConfig();
+
+  const sitesState = useSites();
+  const alertsState = useAlerts();
+
+  const sites = sitesState.data || [];
+  const alerts = alertsState.data || [];
+
   const kpis = useMemo(() => {
-    const openAlerts = sampleAlerts.filter((a) => a.status === "Open").length;
-    const sitesMonitored = sampleSites.length;
-    const delayed = sampleSites.filter((s) => Date.now() - new Date(s.lastIngest).getTime() > 1000 * 60 * 60 * 48).length;
+    const openAlerts = alerts.filter((a) => a.status === "Open").length;
+    const sitesMonitored = sites.length;
+    const delayed = sites.filter(
+      (s) => Date.now() - new Date(s.lastIngest).getTime() > 1000 * 60 * 60 * 48
+    ).length;
 
     return { openAlerts, sitesMonitored, delayed };
-  }, []);
+  }, [alerts, sites]);
 
   const recentAlerts = useMemo(() => {
-    return [...sampleAlerts]
+    return [...alerts]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5);
-  }, []);
+  }, [alerts]);
 
   return (
     <>
@@ -43,12 +55,22 @@ export default function DashboardHome() {
           right={
             <div className="ei-row" style={{ gap: 10 }}>
               <div className="ei-chip ei-chip--info">Ocean Professional</div>
-              <div className="ei-chip">Mock data</div>
+              <div className="ei-chip">{cfg.useMock ? "Mock data" : "Live data"}</div>
             </div>
           }
         />
         <CardBody>
-          <div className="ei-grid ei-grid--kpis">
+          <ApiStateBanner
+            isLoading={sitesState.isLoading || alertsState.isLoading}
+            error={sitesState.error || alertsState.error}
+            label="Dashboard data"
+            onRetry={() => {
+              sitesState.reload();
+              alertsState.reload();
+            }}
+          />
+
+          <div className="ei-grid ei-grid--kpis" style={{ marginTop: 12 }}>
             <KpiTile
               label="Active alerts"
               value={kpis.openAlerts}
@@ -86,7 +108,11 @@ export default function DashboardHome() {
           <CardHeader
             title="Consumption trend"
             subtitle="kWh across the portfolio (placeholder)."
-            right={<button className="ei-btn ei-btn--ghost" type="button">View details</button>}
+            right={
+              <button className="ei-btn ei-btn--ghost" type="button">
+                View details
+              </button>
+            }
           />
           <CardBody>
             <ChartPlaceholder
@@ -117,12 +143,21 @@ export default function DashboardHome() {
         <CardHeader
           title="Recent alerts"
           subtitle="Latest anomaly alerts and triage status."
-          right={<a className="ei-link" href="/alerts">Go to Alerts →</a>}
+          right={
+            <a className="ei-link" href="/alerts">
+              Go to Alerts →
+            </a>
+          }
         />
         <CardBody>
           <DataTable
             columns={[
-              { key: "createdAt", header: "Created", width: "170px", render: (r) => new Date(r.createdAt).toLocaleString() },
+              {
+                key: "createdAt",
+                header: "Created",
+                width: "170px",
+                render: (r) => new Date(r.createdAt).toLocaleString(),
+              },
               { key: "siteName", header: "Site" },
               { key: "type", header: "Type", width: "130px" },
               {
@@ -136,6 +171,7 @@ export default function DashboardHome() {
             ]}
             rows={recentAlerts}
             emptyLabel="No alerts yet."
+            isLoading={alertsState.isLoading}
           />
         </CardBody>
       </Card>
