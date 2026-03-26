@@ -81,6 +81,39 @@ Returns: `Report[]`
 }
 ```
 
+## Mutation endpoints (recommended)
+
+These endpoints are used by the production-ready UI wiring for triage + report generation.
+
+### `POST /alerts/:id/acknowledge`
+Returns: updated `Alert` (recommended) or a minimal ok payload.
+
+Example response:
+```json
+{ "id": "al_9001", "status": "Acknowledged" }
+```
+
+### `POST /alerts/:id/dismiss`
+Returns: updated `Alert` (recommended) or a minimal ok payload.
+
+Example response:
+```json
+{ "id": "al_9001", "status": "Closed" }
+```
+
+### `POST /reports/generate`
+Body (suggested):
+```json
+{
+  "type": "Monthly Portfolio Summary",
+  "period": "Feb 2026",
+  "format": "PDF",
+  "includeAlertDetails": true
+}
+```
+
+Returns: newly created `Report` (recommended) or `{ "id": "...", "status": "Draft" }`.
+
 ## WebSocket (optional)
 
 If `REACT_APP_WS_URL` is provided, the `wsClient` can connect. The UI does not yet depend on WS messages, but the scaffolding supports receiving JSON messages for future real-time updates.

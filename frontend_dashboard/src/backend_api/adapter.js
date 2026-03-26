@@ -30,6 +30,33 @@ export function createMockAdapter() {
     async listReports() {
       return sampleReports;
     },
+
+    /**
+     * Mock "mutations" return updated objects but do not persist them globally.
+     * This keeps UI wiring realistic without introducing a mock store.
+     */
+    async acknowledgeAlert(alertId) {
+      const found = sampleAlerts.find((a) => a.id === alertId);
+      if (!found) return null;
+      return { ...found, status: "Acknowledged" };
+    },
+    async dismissAlert(alertId) {
+      const found = sampleAlerts.find((a) => a.id === alertId);
+      if (!found) return null;
+      return { ...found, status: "Closed" };
+    },
+    async generateReport(payload) {
+      // Simulate a backend-generated report object; prepend so it appears newest.
+      const now = new Date().toISOString();
+      return {
+        id: `rp_mock_${Math.random().toString(16).slice(2)}`,
+        name: payload?.type || "Generated report",
+        period: payload?.period || "Custom",
+        status: "Draft",
+        generatedAt: now,
+        description: "Generated in mock mode (no backend configured).",
+      };
+    },
   };
 }
 
@@ -54,6 +81,20 @@ export function createRestAdapter(options = {}) {
     },
     async listReports() {
       return client.get("/reports");
+    },
+
+    /**
+     * Mutations (scaffold): these endpoints are part of the hardened UI wiring.
+     * A real backend should implement these to make triage and report flows functional.
+     */
+    async acknowledgeAlert(alertId) {
+      return client.post(`/alerts/${encodeURIComponent(alertId)}/acknowledge`);
+    },
+    async dismissAlert(alertId) {
+      return client.post(`/alerts/${encodeURIComponent(alertId)}/dismiss`);
+    },
+    async generateReport(payload) {
+      return client.post("/reports/generate", { body: payload });
     },
   };
 }

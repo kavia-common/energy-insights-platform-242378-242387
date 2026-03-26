@@ -5,7 +5,7 @@ import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import ChartPlaceholder from "../components/charts/ChartPlaceholder";
 import ApiStateBanner from "../components/ui/ApiStateBanner";
-import { useReports } from "../backend_api/hooks";
+import { getErrorMessage, useReportActions, useReports } from "../backend_api/hooks";
 
 function statusVariant(status) {
   if (status === "Ready") return "success";
@@ -19,8 +19,31 @@ export default function ReportsPage() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
+  const [genType, setGenType] = useState("Monthly Portfolio Summary");
+  const [genPeriod, setGenPeriod] = useState("");
+  const [genFormat, setGenFormat] = useState("PDF");
+  const [genIncludeAlerts, setGenIncludeAlerts] = useState("Yes");
+
   const reportsState = useReports();
   const reports = reportsState.data || [];
+
+  const { generate } = useReportActions();
+
+  const onSubmitGenerate = async () => {
+    try {
+      await generate.run({
+        type: genType,
+        period: genPeriod || undefined,
+        format: genFormat,
+        includeAlertDetails: genIncludeAlerts === "Yes",
+      });
+
+      setGenerateOpen(false);
+      reportsState.reload();
+    } catch {
+      // keep modal open; error shown inline for retry.
+    }
+  };
 
   const columns = useMemo(
     () => [
@@ -106,23 +129,58 @@ export default function ReportsPage() {
       <Modal
         open={generateOpen}
         title="Generate a report"
-        description="Select report type and period (mock UI)."
-        onClose={() => setGenerateOpen(false)}
+        description="Select report type and period."
+        onClose={() => {
+          generate.reset();
+          setGenerateOpen(false);
+        }}
         footer={
           <div className="ei-modal__footerRow">
-            <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setGenerateOpen(false)}>
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={() => {
+                generate.reset();
+                setGenerateOpen(false);
+              }}
+              disabled={generate.isLoading}
+            >
               Cancel
             </button>
-            <button className="ei-btn ei-btn--primary" type="button" onClick={() => setGenerateOpen(false)}>
-              Generate (mock)
+            <button
+              className="ei-btn ei-btn--primary"
+              type="button"
+              onClick={onSubmitGenerate}
+              disabled={generate.isLoading}
+            >
+              {generate.isLoading ? "Generating…" : "Generate"}
             </button>
           </div>
         }
       >
+        {generate.error ? (
+          <div className="ei-inlineAlert" role="alert" style={{ marginBottom: 12 }}>
+            <div className="ei-inlineAlert__text">{getErrorMessage(generate.error)}</div>
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={onSubmitGenerate}
+              disabled={generate.isLoading}
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
+
         <div className="ei-formGrid">
           <label className="ei-field">
             <span className="ei-field__label">Report type</span>
-            <select className="ei-input" defaultValue="Monthly Portfolio Summary">
+            <select
+              className="ei-input"
+              value={genType}
+              onChange={(e) => setGenType(e.target.value)}
+              disabled={generate.isLoading}
+            >
               <option>Monthly Portfolio Summary</option>
               <option>Site Benchmarking</option>
               <option>Alert Digest</option>
@@ -130,11 +188,22 @@ export default function ReportsPage() {
           </label>
           <label className="ei-field">
             <span className="ei-field__label">Period</span>
-            <input className="ei-input" placeholder="e.g., Feb 2026 or Q1 2026" />
+            <input
+              className="ei-input"
+              value={genPeriod}
+              onChange={(e) => setGenPeriod(e.target.value)}
+              placeholder="e.g., Feb 2026 or Q1 2026"
+              disabled={generate.isLoading}
+            />
           </label>
           <label className="ei-field">
             <span className="ei-field__label">Format</span>
-            <select className="ei-input" defaultValue="PDF">
+            <select
+              className="ei-input"
+              value={genFormat}
+              onChange={(e) => setGenFormat(e.target.value)}
+              disabled={generate.isLoading}
+            >
               <option>PDF</option>
               <option>HTML</option>
               <option>CSV</option>
@@ -142,14 +211,19 @@ export default function ReportsPage() {
           </label>
           <label className="ei-field">
             <span className="ei-field__label">Include alert details</span>
-            <select className="ei-input" defaultValue="Yes">
+            <select
+              className="ei-input"
+              value={genIncludeAlerts}
+              onChange={(e) => setGenIncludeAlerts(e.target.value)}
+              disabled={generate.isLoading}
+            >
               <option>Yes</option>
               <option>No</option>
             </select>
           </label>
         </div>
         <div className="ei-muted" style={{ marginTop: 10 }}>
-          Next step: call backend report generation endpoint and poll status.
+          If no backend is configured, this runs in mock mode (controlled by REACT_APP_FEATURE_FLAGS / API base URL).
         </div>
       </Modal>
 

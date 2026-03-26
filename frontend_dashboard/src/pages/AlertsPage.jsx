@@ -5,7 +5,7 @@ import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import ApiStateBanner from "../components/ui/ApiStateBanner";
-import { useAlerts } from "../backend_api/hooks";
+import { getErrorMessage, useAlertActions, useAlerts } from "../backend_api/hooks";
 
 function severityVariant(sev) {
   if (sev === "High") return "danger";
@@ -28,6 +28,34 @@ export default function AlertsPage() {
 
   const alertsState = useAlerts();
   const alerts = alertsState.data || [];
+
+  const { acknowledge, dismiss } = useAlertActions();
+
+  const actionBusy = acknowledge.isLoading || dismiss.isLoading;
+
+  const onAcknowledge = async () => {
+    if (!selected) return;
+    try {
+      await acknowledge.run(selected.id);
+
+      // Close modal and refresh list so badge/status stays consistent with backend.
+      setSelected(null);
+      alertsState.reload();
+    } catch {
+      // error is shown inline; keep modal open for retry.
+    }
+  };
+
+  const onDismiss = async () => {
+    if (!selected) return;
+    try {
+      await dismiss.run(selected.id);
+      setSelected(null);
+      alertsState.reload();
+    } catch {
+      // error is shown inline; keep modal open for retry.
+    }
+  };
 
   const tabs = useMemo(
     () => [
@@ -104,21 +132,69 @@ export default function AlertsPage() {
         open={Boolean(selected)}
         title={selected ? `${selected.siteName} — ${selected.type}` : "Alert"}
         description={selected ? selected.summary : undefined}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          // Reset action errors when leaving the modal.
+          acknowledge.reset();
+          dismiss.reset();
+          setSelected(null);
+        }}
         footer={
           <div className="ei-modal__footerRow">
-            <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(null)}>
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={() => {
+                acknowledge.reset();
+                dismiss.reset();
+                setSelected(null);
+              }}
+              disabled={actionBusy}
+            >
               Close
             </button>
-            <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(null)}>
-              Acknowledge (mock)
+
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={onAcknowledge}
+              disabled={!selected || actionBusy || selected.status !== "Open"}
+              aria-disabled={!selected || actionBusy || selected?.status !== "Open"}
+            >
+              {acknowledge.isLoading ? "Acknowledging…" : "Acknowledge"}
             </button>
-            <button className="ei-btn ei-btn--primary" type="button" onClick={() => setSelected(null)}>
-              Create report (mock)
+
+            <button
+              className="ei-btn ei-btn--primary"
+              type="button"
+              onClick={onDismiss}
+              disabled={!selected || actionBusy || selected.status === "Closed"}
+              aria-disabled={!selected || actionBusy || selected?.status === "Closed"}
+            >
+              {dismiss.isLoading ? "Dismissing…" : "Dismiss"}
             </button>
           </div>
         }
       >
+        {acknowledge.error || dismiss.error ? (
+          <div className="ei-inlineAlert" role="alert" style={{ marginBottom: 12 }}>
+            <div className="ei-inlineAlert__text">
+              {getErrorMessage(acknowledge.error || dismiss.error)}
+            </div>
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={() => {
+                // Keep whichever error is present; retry based on likely operation.
+                if (acknowledge.error) onAcknowledge();
+                else onDismiss();
+              }}
+              disabled={actionBusy}
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
+
         {selected ? (
           <div className="ei-detailGrid">
             <div className="ei-detailItem">

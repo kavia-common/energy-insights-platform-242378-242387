@@ -100,6 +100,60 @@ export function useReports() {
 }
 
 // PUBLIC_INTERFACE
+export function useApiAction(actionFn) {
+  /**
+   * Standardized action hook for POST/PUT/PATCH style operations.
+   * Keeps consistent UX for:
+   * - disabled buttons while running
+   * - surfaced errors with Retry
+   *
+   * @template TArgs
+   * @template TResult
+   * @param {(args: TArgs) => Promise<TResult>} actionFn
+   * @returns {{ run: (args: TArgs) => Promise<TResult>, isLoading: boolean, error: any, reset: () => void }}
+   */
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const reset = () => setError(null);
+
+  const run = async (args) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await actionFn(args);
+    } catch (e) {
+      const ne = normalizeError(e);
+      setError(ne);
+      throw ne;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { run, isLoading, error, reset };
+}
+
+// PUBLIC_INTERFACE
+export function useAlertActions() {
+  /** Alert triage mutations via adapter (acknowledge/dismiss). */
+  const api = useBackendApi();
+
+  const acknowledge = useApiAction((alertId) => api.acknowledgeAlert(alertId));
+  const dismiss = useApiAction((alertId) => api.dismissAlert(alertId));
+
+  return { acknowledge, dismiss };
+}
+
+// PUBLIC_INTERFACE
+export function useReportActions() {
+  /** Report generation mutation via adapter. */
+  const api = useBackendApi();
+  const generate = useApiAction((payload) => api.generateReport(payload));
+  return { generate };
+}
+
+// PUBLIC_INTERFACE
 export function getErrorMessage(err) {
   /** Extract a human-friendly error message. */
   const e = normalizeError(err);
