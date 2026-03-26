@@ -1,5 +1,3 @@
-import { ApiError } from "./errors";
-
 function mockFetchOnce(impl) {
   global.fetch = jest.fn(impl);
 }
@@ -76,18 +74,25 @@ describe("backend_api/restClient", () => {
     });
   });
 
-  test("when baseUrl is empty, throws ApiError(NO_API_BASE)", async () => {
+  test("when baseUrl is empty, rejects with error having code=NO_API_BASE", async () => {
     const { createRestClient } = await import("./restClient");
     const client = createRestClient({ baseUrl: "" });
 
-    // Avoid brittle instanceof checks: in Jest, module duplication can lead to two ApiError constructors.
-    await expect(client.get("/sites")).rejects.toMatchObject({
-      name: "ApiError",
-      code: "NO_API_BASE",
-      status: undefined,
-    });
+    // IMPORTANT: consume the rejection exactly once to avoid unhandled rejections / worker crashes.
+    try {
+      await client.get("/sites");
+      throw new Error("Expected client.get('/sites') to reject");
+    } catch (e) {
+      // Assert on error shape/properties (CRA/Jest friendly) rather than instanceof.
+      expect(e).toMatchObject({
+        name: "ApiError",
+        code: "NO_API_BASE",
+      });
+      expect(typeof e.message).toBe("string");
+      expect(e.message).toMatch(/not configured/i);
 
-    // Optional: keep a lightweight "looks like ApiError" invariant without relying on constructor identity.
-    await expect(client.get("/sites")).rejects.toSatisfy?.((e) => e && typeof e.message === "string");
+      // This error is not an HTTP response error, so status should be unset.
+      expect(e.status).toBeUndefined();
+    }
   });
 });
