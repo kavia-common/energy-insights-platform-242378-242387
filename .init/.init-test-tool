@@ -1,0 +1,4 @@
+{
+    "command": "npm run test",
+    "working_directory": "/home/kavia/workspace/code-generation/energy-insights-platform-242378-242387/frontend_dashboard"
+}
