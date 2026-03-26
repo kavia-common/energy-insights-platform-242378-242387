@@ -154,6 +154,25 @@ export function useReportActions() {
 }
 
 // PUBLIC_INTERFACE
+export function useSiteActions() {
+  /** Sites mutations via adapter (create/update). */
+  const api = useBackendApi();
+
+  const create = useApiAction((payload) => api.createSite(payload));
+  const update = useApiAction(({ siteId, patch }) => api.updateSite(siteId, patch));
+
+  return { create, update };
+}
+
+// PUBLIC_INTERFACE
+export function useAnomalyActions() {
+  /** Anomaly-related mutations via adapter (create alert from anomaly). */
+  const api = useBackendApi();
+  const createAlert = useApiAction((anomalyId) => api.createAlertFromAnomaly(anomalyId));
+  return { createAlert };
+}
+
+// PUBLIC_INTERFACE
 export function getErrorMessage(err) {
   /** Extract a human-friendly error message. */
   const e = normalizeError(err);

@@ -45,6 +45,44 @@ export function createMockAdapter() {
       if (!found) return null;
       return { ...found, status: "Closed" };
     },
+
+    async createSite(payload) {
+      // Simulate backend-assigned ID and fill in reasonable defaults.
+      const now = new Date().toISOString();
+      return {
+        id: `site_mock_${Math.random().toString(16).slice(2)}`,
+        name: payload?.name || "New site",
+        account: payload?.account || "Unknown account",
+        city: payload?.city || "Unknown",
+        meters: payload?.meters ?? 0,
+        status: payload?.status || "Active",
+        lastIngest: payload?.lastIngest || now,
+      };
+    },
+
+    async updateSite(siteId, patch) {
+      const found = sampleSites.find((s) => s.id === siteId);
+      if (!found) return null;
+      return { ...found, ...(patch || {}), id: found.id };
+    },
+
+    async createAlertFromAnomaly(anomalyId) {
+      const found = sampleAnomalies.find((a) => a.id === anomalyId);
+      if (!found) return null;
+      const now = new Date().toISOString();
+      return {
+        id: `al_mock_${Math.random().toString(16).slice(2)}`,
+        createdAt: now,
+        siteId: found.siteId,
+        siteName: found.siteName,
+        type: "Anomaly",
+        severity: found.score >= 0.85 ? "High" : found.score >= 0.7 ? "Medium" : "Low",
+        status: "Open",
+        summary: `${found.category} detected (${Math.round(found.score * 100)}%).`,
+        recommendation: "Review the anomaly details and confirm operational drivers.",
+      };
+    },
+
     async generateReport(payload) {
       // Simulate a backend-generated report object; prepend so it appears newest.
       const now = new Date().toISOString();
@@ -93,6 +131,26 @@ export function createRestAdapter(options = {}) {
     async dismissAlert(alertId) {
       return client.post(`/alerts/${encodeURIComponent(alertId)}/dismiss`);
     },
+
+    /**
+     * Sites: create/update (scaffold)
+     * Backend can implement these as standard CRUD; UI will refresh lists after mutation.
+     */
+    async createSite(payload) {
+      return client.post("/sites", { body: payload });
+    },
+    async updateSite(siteId, patch) {
+      return client.patch(`/sites/${encodeURIComponent(siteId)}`, { body: patch });
+    },
+
+    /**
+     * Anomalies → Alerts (optional scaffold): allows creating a triage item from an anomaly.
+     * If backend does not implement it yet, keep it a no-op until integrated.
+     */
+    async createAlertFromAnomaly(anomalyId) {
+      return client.post(`/anomalies/${encodeURIComponent(anomalyId)}/create-alert`);
+    },
+
     async generateReport(payload) {
       return client.post("/reports/generate", { body: payload });
     },

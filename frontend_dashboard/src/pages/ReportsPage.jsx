@@ -55,7 +55,12 @@ export default function ReportsPage() {
         width: "120px",
         render: (r) => <Badge variant={statusVariant(r.status)}>{r.status}</Badge>,
       },
-      { key: "generatedAt", header: "Generated", width: "170px", render: (r) => new Date(r.generatedAt).toLocaleString() },
+      {
+        key: "generatedAt",
+        header: "Generated",
+        width: "170px",
+        render: (r) => (r.generatedAt ? new Date(r.generatedAt).toLocaleString() : "—"),
+      },
       { key: "description", header: "Description" },
     ],
     []
@@ -69,9 +74,18 @@ export default function ReportsPage() {
             title="Report templates"
             subtitle="Generate common views for stakeholders."
             right={
-              <button className="ei-btn ei-btn--primary" type="button" onClick={() => setGenerateOpen(true)}>
-                Generate report
-              </button>
+              <div className="ei-row" style={{ gap: 10 }}>
+                <button
+                  className="ei-btn ei-btn--primary"
+                  type="button"
+                  onClick={() => {
+                    generate.reset();
+                    setGenerateOpen(true);
+                  }}
+                >
+                  Generate report
+                </button>
+              </div>
             }
           />
           <CardBody>
@@ -101,7 +115,15 @@ export default function ReportsPage() {
       </div>
 
       <Card>
-        <CardHeader title="Generated reports" subtitle="Downloadable artifacts and drafts." />
+        <CardHeader
+          title="Generated reports"
+          subtitle="Downloadable artifacts and drafts."
+          right={
+            <button className="ei-btn ei-btn--ghost" type="button" onClick={() => reportsState.reload()}>
+              Refresh
+            </button>
+          }
+        />
         <CardBody>
           <ApiStateBanner
             isLoading={reportsState.isLoading}
@@ -120,7 +142,7 @@ export default function ReportsPage() {
                   Open
                 </button>
               )}
-              emptyLabel="No reports yet."
+              emptyLabel="No reports yet. Generate your first report to create an artifact."
             />
           </div>
         </CardBody>
@@ -147,12 +169,7 @@ export default function ReportsPage() {
             >
               Cancel
             </button>
-            <button
-              className="ei-btn ei-btn--primary"
-              type="button"
-              onClick={onSubmitGenerate}
-              disabled={generate.isLoading}
-            >
+            <button className="ei-btn ei-btn--primary" type="button" onClick={onSubmitGenerate} disabled={generate.isLoading}>
               {generate.isLoading ? "Generating…" : "Generate"}
             </button>
           </div>
@@ -161,12 +178,7 @@ export default function ReportsPage() {
         {generate.error ? (
           <div className="ei-inlineAlert" role="alert" style={{ marginBottom: 12 }}>
             <div className="ei-inlineAlert__text">{getErrorMessage(generate.error)}</div>
-            <button
-              className="ei-btn ei-btn--ghost"
-              type="button"
-              onClick={onSubmitGenerate}
-              disabled={generate.isLoading}
-            >
+            <button className="ei-btn ei-btn--ghost" type="button" onClick={onSubmitGenerate} disabled={generate.isLoading}>
               Retry
             </button>
           </div>
@@ -175,12 +187,7 @@ export default function ReportsPage() {
         <div className="ei-formGrid">
           <label className="ei-field">
             <span className="ei-field__label">Report type</span>
-            <select
-              className="ei-input"
-              value={genType}
-              onChange={(e) => setGenType(e.target.value)}
-              disabled={generate.isLoading}
-            >
+            <select className="ei-input" value={genType} onChange={(e) => setGenType(e.target.value)} disabled={generate.isLoading}>
               <option>Monthly Portfolio Summary</option>
               <option>Site Benchmarking</option>
               <option>Alert Digest</option>
@@ -198,12 +205,7 @@ export default function ReportsPage() {
           </label>
           <label className="ei-field">
             <span className="ei-field__label">Format</span>
-            <select
-              className="ei-input"
-              value={genFormat}
-              onChange={(e) => setGenFormat(e.target.value)}
-              disabled={generate.isLoading}
-            >
+            <select className="ei-input" value={genFormat} onChange={(e) => setGenFormat(e.target.value)} disabled={generate.isLoading}>
               <option>PDF</option>
               <option>HTML</option>
               <option>CSV</option>
@@ -253,7 +255,7 @@ export default function ReportsPage() {
             </div>
             <div className="ei-detailItem">
               <div className="ei-detailLabel">Generated</div>
-              <div className="ei-detailValue">{new Date(selected.generatedAt).toLocaleString()}</div>
+              <div className="ei-detailValue">{selected.generatedAt ? new Date(selected.generatedAt).toLocaleString() : "—"}</div>
             </div>
             <div className="ei-detailItem ei-detailItem--full">
               <div className="ei-detailLabel">Description</div>

@@ -9,7 +9,9 @@ export {
   useAlerts,
   useAlertActions,
   useAnomalies,
+  useAnomalyActions,
   useReports,
   useReportActions,
   useSites,
+  useSiteActions,
 } from "./hooks";

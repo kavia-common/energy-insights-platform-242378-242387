@@ -5,7 +5,7 @@ import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import ApiStateBanner from "../components/ui/ApiStateBanner";
-import { useAnomalies } from "../backend_api/hooks";
+import { getErrorMessage, useAnomalies, useAnomalyActions } from "../backend_api/hooks";
 
 function scoreTone(score) {
   if (score >= 0.85) return "danger";
@@ -25,6 +25,8 @@ export default function AnomaliesPage() {
 
   const anomaliesState = useAnomalies();
   const anomalies = anomaliesState.data || [];
+
+  const { createAlert } = useAnomalyActions();
 
   const rows = useMemo(() => {
     if (tab === "high") return anomalies.filter((a) => a.score >= 0.85);
@@ -66,13 +68,33 @@ export default function AnomaliesPage() {
     []
   );
 
+  const onCreateAlert = async () => {
+    if (!selected) return;
+    try {
+      await createAlert.run(selected.id);
+
+      // Close modal and refresh anomalies; optionally the backend may update anomaly state later.
+      setSelected(null);
+      anomaliesState.reload();
+    } catch {
+      // Inline error banner + Retry keeps modal open.
+    }
+  };
+
   return (
     <>
       <Card>
         <CardHeader
           title="Anomalies"
           subtitle="Model-detected deviations from expected consumption patterns."
-          right={<Tabs tabs={tabs} value={tab} onChange={setTab} ariaLabel="Anomaly filters" />}
+          right={
+            <div className="ei-row" style={{ gap: 10 }}>
+              <Tabs tabs={tabs} value={tab} onChange={setTab} ariaLabel="Anomaly filters" />
+              <button className="ei-btn ei-btn--ghost" type="button" onClick={() => anomaliesState.reload()}>
+                Refresh
+              </button>
+            </div>
+          }
         />
         <CardBody>
           <ApiStateBanner
@@ -86,13 +108,27 @@ export default function AnomaliesPage() {
               columns={columns}
               rows={rows}
               isLoading={anomaliesState.isLoading}
-              onRowClick={(row) => setSelected(row)}
+              onRowClick={(row) => {
+                createAlert.reset();
+                setSelected(row);
+              }}
               rowActions={(row) => (
-                <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(row)}>
+                <button
+                  className="ei-btn ei-btn--ghost"
+                  type="button"
+                  onClick={() => {
+                    createAlert.reset();
+                    setSelected(row);
+                  }}
+                >
                   View
                 </button>
               )}
-              emptyLabel="No anomalies for this filter."
+              emptyLabel={
+                tab === "all"
+                  ? "No anomalies detected yet."
+                  : "No anomalies for this filter."
+              }
             />
           </div>
         </CardBody>
@@ -102,18 +138,49 @@ export default function AnomaliesPage() {
         open={Boolean(selected)}
         title={selected ? `${selected.siteName} — ${selected.category}` : "Anomaly"}
         description={selected ? `Detected ${new Date(selected.detectedAt).toLocaleString()}` : undefined}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          createAlert.reset();
+          setSelected(null);
+        }}
         footer={
           <div className="ei-modal__footerRow">
-            <button className="ei-btn ei-btn--ghost" type="button" onClick={() => setSelected(null)}>
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={() => {
+                createAlert.reset();
+                setSelected(null);
+              }}
+              disabled={createAlert.isLoading}
+            >
               Close
             </button>
-            <button className="ei-btn ei-btn--primary" type="button" onClick={() => setSelected(null)}>
-              Create alert (mock)
+            <button
+              className="ei-btn ei-btn--primary"
+              type="button"
+              onClick={onCreateAlert}
+              disabled={!selected || createAlert.isLoading}
+              aria-disabled={!selected || createAlert.isLoading}
+            >
+              {createAlert.isLoading ? "Creating alert…" : "Create alert"}
             </button>
           </div>
         }
       >
+        {createAlert.error ? (
+          <div className="ei-inlineAlert" role="alert" style={{ marginBottom: 12 }}>
+            <div className="ei-inlineAlert__text">{getErrorMessage(createAlert.error)}</div>
+            <button
+              className="ei-btn ei-btn--ghost"
+              type="button"
+              onClick={onCreateAlert}
+              disabled={createAlert.isLoading}
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
+
         {selected ? (
           <div className="ei-detailGrid">
             <div className="ei-detailItem">
